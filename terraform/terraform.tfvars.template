@@ -1,0 +1,22 @@
+# Terraform variables. To deploy, first copy this file to terraform.tfvars. Then, edit each variable to a custom value.
+
+# Path to the SSH public key for the server. This key should be created on the host's home laptop, before provisioning occurs.
+# Follow instructions in the TF README for details on how to create an SSH keypair.
+key_path              = "/path/to/jamulus/server/public/key.pub"
+
+# These are the IP ranges of the musicians joining the jam session, to ensure that the session is private.
+# Refer to instructions in the TF README to find your IP address.
+allowed_source_ranges = [
+    "xxx.xxx.xxx.xxx/xx", # IP range of 1st musician's home network
+    "yyy.yyy.yyy.yyy/yy", # IP range of 2nd musician's home network
+    "zzz.zzz.zzz.zzz/zz"  # IP range of 3rd musician's home network, etc
+]
+
+# The location of the datacenter in which the server will be deployed.
+region                = "xx-xxxxx"
+
+# Path to the GCP credential JSON file, pointing to a GCP service account with the correct permissions for deployment.
+credentials_file      = "/path/to/service/account/credentials.json"
+
+# The name of the GCP project in which you will deploy the Jamulus Server
+project_id            = "xxxxxxxxxxxxxxxxx"
