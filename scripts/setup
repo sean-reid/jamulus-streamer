@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+
+set -eou pipefail
+
+cmdname=$(basename $0)
+version="v0.1.0"
+
+usage="
+usage: $cmdname [options] [arguments]
+description: setup user environment for jamulus streaming server
+
+Options:
+  -p  --platform PLATFORM      The platform type of the user. If omitted, platform is auto-detected.
+  -q  --quiet                  Hide all output that usually goes to stdout.
+  -v  --verbose                Show extra output helpful in debugging.
+      --version                Show the version of this script.
+  -h, --help                   Show this usage menu.
+"
+
+main() {
+    quiet=0
+    verbose=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h | --help )
+                echo "$usage"
+                exit 0
+                ;;
+            --version ) 
+                echo "$cmdname: $version"
+                exit 0
+                ;;
+            -q | --quiet )
+                quiet=1
+                ;;
+            -v | --verbose )
+                verbose=1
+                ;;
+            -p | --platform )
+                shift
+                platform=$1
+                ;;
+            * )
+                echo "$usage" >&2
+                exit 101
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -z "${platform:-}" ]]; then
+        platform=$(detect-platform)
+    else
+        case $platform in
+            macos | linux | windows )
+                ;;
+            * )
+                echo "$cmdname: unknown or unsupported platform: $platform" >&2
+                exit 102
+                ;;
+        esac
+    fi
+
+    if [[ "$verbose" -eq 1 ]]; then
+        echo "$cmdname: platform detected is $platform"
+    fi
+
+    install-deps-$platform 
+
+    exit 0
+}
+
+
+# Function to detect and set the platform
+detect-platform() {
+    local platform
+    case "$(uname)" in
+        Darwin )
+            platform=macos
+            ;;
+        Linux )
+            platform=linux
+            ;;
+        * )
+            # Check for Windows using additional conditions
+            if [[ -n "$WSL_DISTRO_NAME" ]] || [[ -n "$MSYSTEM" ]]; then
+                platform=windows
+            else
+                echo "$cmdname: unknown or unsupported platform"
+                exit 111
+            fi
+            ;;
+    esac
+    echo "$platform"
+}
+
+# Install dependencies on Ubuntu Linux
+install-deps-linux() {
+    # update package cache
+    sudo apt update
+
+    # install terraform
+    wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo apt update && sudo apt install terraform
+
+    # install ansible
+    sudo apt -y install software-properties-common
+    sudo apt-add-repository ppa:ansible/ansible
+    sudo apt install ansible
+}
+
+# Install dependencies with HomeBrew on MacOS
+install-deps-macos() {
+    # get homebrew if it is not already installed
+    if ! command -v brew &>/dev/null; then
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi 
+
+    # install Terraform
+    brew install terraform
+
+    # install ansible
+    brew install ansible
+}
+
+install-deps-windows() {
+    echo "$cmdname: windows is unsupported currently. sorry!" >&2
+    exit 141
+}
+
+# Run main so that editing this file doesn't affect the result
+{
+    main "$@"
+}

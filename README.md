@@ -11,9 +11,6 @@ What do you do if you want to stream a private online jam session to YouTube Liv
 2. Deploy and configure server in GCP
 3. Stream audio from server to YouTube
 
-## Documentation
-For platform-specific docs, please go [here](./docs). Read these docs before attempting a deployment.
-
 ## Quick Start
 Clone this repo if you haven't already. You'll need `git` for this:
 ```
@@ -25,25 +22,10 @@ Change into the repo directory:
 cd jamulus-streamer
 ```
 
-And run the scripts!
+Then, follow the docs for your platform.
 
-First, install dependencies and configure your environment.
-```
-./scripts/setup
-```
-Note: this step will install software on your laptop.
-
-Then, deploy a Jamulus server to Google Cloud.
-```
-./scripts/deploy
-```
-Note: this step uses [Terraform](https://www.terraform.io) and [Ansible](https://www.ansible.com). Please consult the respective READMEs ([here](./terraform) and [here](./ansible)) and the [docs](./docs) for extra setup.
-
-Finally, start streaming.
-```
-./scripts/stream
-```
-Note: this step requires that you have a YouTube account set up, and a streaming key. Please consult the [docs](./docs) for more details.
+## Documentation
+For platform-specific docs, please go [here](./docs). Read these docs before attempting a deployment.
 
 ## Author
 * [Sean Reid](https://sean-reid.github.io)
