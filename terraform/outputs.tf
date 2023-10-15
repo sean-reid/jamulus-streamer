@@ -1,7 +1,7 @@
 output "instance_id" {
-  value = aws_instance.jamulus_instance.id
+  value = google_compute_instance.jamulus_instance.id
 }
 
 output "public_ip" {
-  value = aws_instance.jamulus_instance.public_ip
+  value = google_compute_instance.jamulus_instance.network_interface.0.access_config.0.nat_ip
 }

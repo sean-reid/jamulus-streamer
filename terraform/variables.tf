@@ -1,17 +1,34 @@
 variable "region" {
-  description = "AWS region"
-  default     = "us-east-1"
+  description = "GCP region"
+  default     = "us-west1"
 }
 
 variable "instance_type" {
-  description = "EC2 instance type"
-  default     = "t2.micro"
+  description = "GCE instance type"
+  default     = "n1-standard-1"
 }
 
 variable "key_path" {
-  description = "EC2 public SSH key path"
+  description = "GCE public SSH key path"
 }
 
-variable "your_ip" {
-  description = "The IP address (with /32) of your laptop, for ssh access"
+variable "allowed_source_ranges" {
+  description = "List of allowed source IP ranges for SSH access"
+  type        = list(string)
+}
+
+variable "project_id" {
+  description = "The Google Cloud project ID"
+  type        = string
+}
+
+variable "credentials_file" {
+  description = "Path to the Google Cloud service account key JSON file"
+  type        = string
+}
+
+variable "subnet_cidr" {
+  description = "CIDR block for the subnet"
+  type        = string
+  default     = "10.0.0.0/24"
 }

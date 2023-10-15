@@ -1,0 +1,57 @@
+- name: Configure Jamulus Server
+  hosts: jamulus_server # need an inventory.ini for this to work
+  remote_user: ubuntu
+  become: yes
+
+  tasks:
+    - name: Set the hostname
+      hostname:
+        name: jamulus-streamer
+
+    - name: Update package cache
+      apt:
+        update_cache: yes
+
+    - name: Install required packages
+      package:
+        name:
+          - gcc
+          - g++
+          - alsa-utils
+          - make
+          - qtbase5-dev
+          - libqt5multimedia5
+          - qtmultimedia5-dev
+          - jackd
+          - libjack-jackd2-dev
+          - libasound2-dev
+          - ffmpeg
+        state: present
+
+    - name: Enable soundcard
+      command: sudo modprobe snd-aloop
+
+    - name: Download Jamulus source code
+      get_url:
+        url: "https://github.com/corrados/jamulus/archive/master.tar.gz"
+        dest: "/tmp/jamulus.tar.gz"
+
+    - name: Extract Jamulus source code
+      unarchive:
+        src: "/tmp/jamulus.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: Configure Jamulus
+      command: "/usr/lib/qt5/bin/qmake"
+      args:
+        chdir: /tmp/jamulus-main
+
+    - name: Build Jamulus
+      command: "make"
+      args:
+        chdir: /tmp/jamulus-main
+
+    - name: Install Jamulus
+      command: "mv /tmp/jamulus-main/Jamulus /usr/bin/Jamulus"
+
