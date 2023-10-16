@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+set -eou pipefail
+
+cmdname=$(basename $0)
+version="v0.1.0"
+
+usage="
+usage: $cmdname [options] [arguments]
+description: run jamulus server and stream audio from server to youtube
+
+Options:
+  -a  --ip-address IP_ADDRESS  IP address of the server that is running Jamulus.
+  -i  --ssh-key SSH_KEY_PATH   Path to the SSH private key needed to login to the server.
+  -k  --stream-key STREAM_KEY  The youtube RTMP streaming key.
+  -b  --background IMAGE_PATH  Path to the image that you'd like to use for the stream background.
+  -c  --cleanup                Stop streaming and clean up connections.
+  -q  --quiet                  Hide all output that usually goes to stdout.
+  -v  --verbose                Show extra output helpful in debugging.
+      --version                Show the version of this script.
+  -h  --help                   Show this usage menu.
+"
+
+main() {
+    quiet=0
+    verbose=0
+    cleanup=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h | --help )
+                echo "$usage"
+                exit 0
+                ;;
+            --version ) 
+                echo "$cmdname: $version"
+                exit 0
+                ;;
+            -q | --quiet )
+                quiet=1
+                ;;
+            -v | --verbose )
+                verbose=1
+                ;;
+            -a | --ip-address )
+                shift
+                address=$1
+                ;;
+            -i | --ssh-key )
+                shift
+                ssh_key=$1
+                ;;
+            -k | --stream-key )
+                shift
+                stream_key=$1
+                ;;
+            -b | --background )
+                shift
+                background=$1
+                ;;
+            -c | --cleanup )
+                shift
+                cleanup=1
+                ;;
+            * )
+                echo "$usage" >&2
+                exit 101
+                ;;
+        esac
+        shift
+    done
+
+    # Name of background image file
+    background_name=$(basename $background)
+
+    if [[ "$cleanup" -eq 1 ]]; then
+        # End all streams
+        ssh -i $ssh_key ubuntu@$address "killall ffmpeg"
+
+        # Stop Jamulus server and client
+        ssh -i $ssh_key ubuntu@$address "killall Jamulus"
+    else
+        # Transfer image to server
+        rsync -avz -e "ssh -i $ssh_key" $background ubuntu@$address:$background_name
+
+        # Start Jamulus server
+        ssh -i $ssh_key ubuntu@$address "nohup Jamulus -s --nogui > jamulus-server-output.log 2>&1 &"
+
+        # Start Jamulus streaming client
+        ssh -i $ssh_key ubuntu@$address "nohup Jamulus -c localhost --nogui > jamulus-client-output.log 2>&1 &"
+
+        # Start stream
+        ssh -i $ssh_key ubuntu@$address "nohup ffmpeg -stream_loop -1 -i $background_name -f alsa -i hw:Loopback,0 -ar 44100 -vf 'scale=1920:1076' -c:v libx264 -tune stillimage -pix_fmt yuv420p -c:a aac -strict experimental -b:a 192k -shortest -f flv rtmp://a.rtmp.youtube.com/live2/$stream_key > ffmpeg-output.log 2>&1 &"
+    fi
+
+    exit 0
+}
+
+# Run main so that editing this file doesn't affect the result
+{
+    main "$@"
+}
