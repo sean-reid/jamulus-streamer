@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+
+set -eou pipefail
+
+cmdname=$(basename $0)
+cmddir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+version="v0.1.0"
+
+usage="
+usage: $cmdname [options] [arguments]
+description: run jamulus server and headless client
+
+Options:
+  -a  --ip-address IP_ADDRESS  IP address of the server that is running Jamulus.
+  -i  --ssh-key SSH_KEY_PATH   Path to the SSH private key needed to login to the server.
+  -s  --server-only            Only deploy Jamulus server, and not client
+  -c  --client-only            Only deploy Jamulus client, and not server
+  -d  --destroy                Destroy all instances of Jamulus.
+  -q  --quiet                  Hide all output that usually goes to stdout.
+  -v  --verbose                Show extra output helpful in debugging.
+      --version                Show the version of this script.
+  -h  --help                   Show this usage menu.
+"
+
+main() {
+    quiet=0
+    verbose=0
+    server=0
+    client=0
+    destroy=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h | --help )
+                echo "$usage"
+                exit 0
+                ;;
+            --version ) 
+                echo "$cmdname: $version"
+                exit 0
+                ;;
+            -q | --quiet )
+                quiet=1
+                ;;
+            -v | --verbose )
+                verbose=1
+                ;;
+            -a | --ip-address )
+                shift
+                address=$1
+                ;;
+            -i | --ssh-key )
+                shift
+                ssh_key=$1
+                ;;
+            -s | --server-only )
+                server=1
+                ;;
+            -c | --client-only )
+                client=1
+                ;;
+            -d | --destroy )
+                destroy=1
+                ;;
+            * )
+                echo "$usage" >&2
+                exit 101
+                ;;
+        esac
+        shift
+    done
+
+    # Jamulus client settings file
+    inifile="${cmddir}/../data/Jamulus.ini"
+
+    if [[ "$destroy" -eq 1 ]]; then
+        # Stop Jamulus server and client
+        ssh -i $ssh_key ubuntu@$address "killall Jamulus"
+    elif [[ "$server" -eq 1 ]]; then
+        # Start Jamulus server
+        ssh -i $ssh_key ubuntu@$address "nohup Jamulus -s --nogui > jamulus-server-output.log 2>&1 &"
+    elif [[ "$client" -eq 1 ]]; then
+        # Transfer inifile to server
+        rsync -avz -e "ssh -i $ssh_key" "$inifile" "ubuntu@${address}:Jamulus.ini"
+
+        # Start Jamulus streaming client
+        ssh -i $ssh_key ubuntu@$address "nohup Jamulus --inifile Jamulus.ini -c localhost --nogui > jamulus-client-output.log 2>&1 &"
+    else
+        # Transfer inifile to server
+        rsync -avz -e "ssh -i $ssh_key" "$inifile" "ubuntu@${address}:Jamulus.ini"
+
+        # Start Jamulus server
+        ssh -i $ssh_key ubuntu@$address "nohup Jamulus -s --nogui > jamulus-server-output.log 2>&1 &"
+        
+        # Start Jamulus streaming client
+        ssh -i $ssh_key ubuntu@$address "nohup Jamulus --inifile Jamulus.ini -c localhost --nogui > jamulus-client-output.log 2>&1 &"
+    fi
+
+    exit 0
+}
+
+# Run main so that editing this file doesn't affect the result
+{
+    main "$@"
+}
